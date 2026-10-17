@@ -320,10 +320,10 @@
     <!-- ADMIN SETUP VIEW -->
     <div id="view-admin" class="card">
       <h2>Exam Blueprint Configuration</h2>
-      <p>Exam name, time aur subject modules set karein. ASTA Engine AI ke zariye questions compile karega.</p>
+      <p>Exam name, time aur subject modules set karein. ASTA Engine AI ke zariye dynamic questions compile karega.</p>
 
       <label>Target Examination Name</label>
-      <input type="text" id="cfg-exam-name" value="RRB Radiographer CBT Examination 2026">
+      <input type="text" id="cfg-exam-name" value="SSC Phase 14 SI Examination">
 
       <label>Exam Duration (Minutes)</label>
       <input type="number" id="cfg-duration" value="10" min="1" max="180">
@@ -413,12 +413,12 @@
 
   <script>
     // SECURED INJECTED API KEY
-    const GEMINI_API_KEY = "AQ.Ab8RN6L5t4WLXVlQXHcXjqbwPqozSp9CusQNurL_oQCAlFkRpQ"; 
+    const GEMINI_API_KEY = "AQ.Ab8RN6IDWBo1-nHo4lCa9exsxy9pD3G80DyQzWi2o9gAfjDtgQ"; 
 
     const defaultSubjects = [
-      { name: "Radiation Physics", count: 2, difficulty: "Medium" },
-      { name: "Radiographic Positioning", count: 2, difficulty: "Hard" },
-      { name: "General Aptitude", count: 2, difficulty: "Easy" }
+      { name: "General Knowledge of India", count: 2, difficulty: "Medium" },
+      { name: "Reasoning & Mental Ability", count: 2, difficulty: "Hard" },
+      { name: "Quantitative Aptitude", count: 2, difficulty: "Easy" }
     ];
 
     let examConfig = {};
@@ -513,15 +513,13 @@
 
       examConfig = { examName, duration, subjects };
 
-      if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
-        try {
-          generatedQuestions = await fetchQuestionsFromGemini(GEMINI_API_KEY.trim(), examConfig);
-        } catch (err) {
-          console.error("AI Error:", err);
-          generatedQuestions = generateFallbackQuestions(examConfig);
-        }
-      } else {
-        generatedQuestions = generateFallbackQuestions(examConfig);
+      try {
+        generatedQuestions = await fetchQuestionsFromGemini(GEMINI_API_KEY.trim(), examConfig);
+      } catch (err) {
+        console.error("AI Error:", err);
+        alert("ASTA System Notice: " + err.message);
+        // Fallback only if complete failure
+        generatedQuestions = generateDynamicFallback(examConfig);
       }
 
       generatedQuestions = shuffleArray(generatedQuestions);
@@ -530,67 +528,86 @@
       });
 
       spinner.classList.add("hidden");
+      btn.classList.remove("hidden");
       document.getElementById("view-admin").classList.add("hidden");
       document.getElementById("login-exam-title").innerText = examName;
       document.getElementById("view-login").classList.remove("hidden");
     }
 
     async function fetchQuestionsFromGemini(key, cfg) {
-      const prompt = `Generate realistic Multiple Choice Questions for competitive exam titled "${cfg.examName}".
+      const promptText = `You are an examination question generator.
+Create realistic multiple choice questions for exam: "${cfg.examName}".
 Modules specification: ${JSON.stringify(cfg.subjects)}.
-Output format: Return ONLY a valid JSON array of objects without markdown formatting or code blocks:
+Output format: Return ONLY raw JSON array of objects without code ticks or markdown:
 [
   {
-    "text": "Actual question body without difficulty labels or subject tags?",
+    "text": "Question statement?",
     "options": [
-      {"text": "Correct Option", "correct": true},
-      {"text": "Wrong Option 1", "correct": false},
-      {"text": "Wrong Option 2", "correct": false},
-      {"text": "Wrong Option 3", "correct": false}
+      {"text": "Correct answer", "correct": true},
+      {"text": "Distractor 1", "correct": false},
+      {"text": "Distractor 2", "correct": false},
+      {"text": "Distractor 3", "correct": false}
     ]
   }
 ]`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
+      // Dual endpoint fallback strategy
+      const endpoints = [
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`
+      ];
 
-      const data = await res.json();
-      const raw = data.candidates[0].content.parts[0].text;
-      const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(clean);
+      let lastError = null;
+
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: {
+                temperature: 0.6,
+                responseMimeType: "application/json"
+              }
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const raw = data.candidates[0].content.parts[0].text;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          } else {
+            const errBody = await res.text();
+            lastError = new Error(`HTTP ${res.status}: ${errBody}`);
+          }
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      throw (lastError || new Error("Failed to communicate with AI Engine"));
     }
 
-    function generateFallbackQuestions(cfg) {
-      const qBank = {
-        "Radiation Physics": [
-          { text: "What is the SI unit of absorbed radiation dose?", options: [{text:"Gray (Gy)", correct:true},{text:"Sievert (Sv)", correct:false},{text:"Becquerel (Bq)", correct:false},{text:"Roentgen", correct:false}] },
-          { text: "Which interaction between X-rays and matter results in total photon absorption?", options: [{text:"Photoelectric Effect", correct:true},{text:"Compton Scattering", correct:false},{text:"Coherent Scattering", correct:false},{text:"Pair Production", correct:false}] }
-        ],
-        "Radiographic Positioning": [
-          { text: "Which radiographic projection best demonstrates free intraperitoneal air under the diaphragm?", options: [{text:"Erect Chest PA / Abdomen", correct:true},{text:"Supine Abdomen AP", correct:false},{text:"Right Lateral Decubitus", correct:false},{text:"Prone Abdomen", correct:false}] },
-          { text: "In standard PA chest radiography, why is a minimum 72-inch (180 cm) SID used?", options: [{text:"To minimize heart magnification", correct:true},{text:"To increase beam scatter", correct:false},{text:"To decrease exposure time", correct:false},{text:"To avoid grid cutoff", correct:false}] }
-        ],
-        "General Aptitude": [
-          { text: "A worker completes a task in 12 days and another does it in 24 days. Together they complete it in:", options: [{text:"8 days", correct:true},{text:"10 days", correct:false},{text:"16 days", correct:false},{text:"6 days", correct:false}] },
-          { text: "In a code, 'SAFE' is coded as 'TBGF'. How is 'EXAM' coded?", options: [{text:"FYBN", correct:true},{text:"FZBN", correct:false},{text:"EYBN", correct:false},{text:"FXAM", correct:false}] }
-        ]
-      };
-
-      const list = [];
+    function generateDynamicFallback(cfg) {
+      const fallbackList = [];
       cfg.subjects.forEach(sub => {
-        const pool = qBank[sub.name] || [
-          { text: `What is the standard regulatory protocol for ${sub.name}?`, options: [{text:"Verified Core Standard", correct:true},{text:"Uncalibrated Drift", correct:false},{text:"Bypass Route", correct:false},{text:"Secondary Leakage", correct:false}] }
-        ];
-        for (let i = 0; i < sub.count; i++) {
-          list.push(pool[i % pool.length]);
+        for (let i = 1; i <= sub.count; i++) {
+          fallbackList.push({
+            text: `[${sub.name}] Question ${i}: Select the verified parameter under standard ${cfg.examName} syllabus.`,
+            options: [
+              { text: `Verified Core Criterion for ${sub.name}`, correct: true },
+              { text: `Secondary Empirical Variance`, correct: false },
+              { text: `Unchecked Boundary Offset`, correct: false },
+              { text: `Manual Session Bypass`, correct: false }
+            ]
+          });
         }
       });
-      return list;
+      return fallbackList;
     }
 
     function attemptDecryption() {
@@ -623,119 +640,4 @@ Output format: Return ONLY a valid JSON array of objects without markdown format
 
     function bindSecurityListeners() {
       window.addEventListener("blur", triggerViolation);
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) triggerViolation();
-      });
-    }
-
-    function triggerViolation() {
-      violationStrikes++;
-      const box = document.getElementById("violation-tracker");
-      box.classList.remove("hidden");
-      document.getElementById("violation-count").innerText = violationStrikes;
-
-      if (violationStrikes >= 3) {
-        alert("Maximum security violations reached. Auto-Submitting.");
-        finalizeSubmission();
-      }
-    }
-
-    function renderQuestion(index) {
-      if (index < 0 || index >= generatedQuestions.length) return;
-      currentIndex = index;
-
-      const q = generatedQuestions[index];
-      document.getElementById("q-counter").innerText = `Question ${index + 1} of ${generatedQuestions.length}`;
-      document.getElementById("q-text").innerText = q.text;
-
-      const optContainer = document.getElementById("options-container");
-      optContainer.innerHTML = "";
-
-      q.options.forEach((opt, idx) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "option-btn";
-        if (userResponses[currentIndex] === idx) {
-          btn.classList.add("selected");
-        }
-        btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt.text}`;
-        btn.onclick = () => {
-          userResponses[currentIndex] = idx;
-          renderQuestion(currentIndex);
-        };
-        optContainer.appendChild(btn);
-      });
-    }
-
-    function navigateQuestion(step) {
-      renderQuestion(currentIndex + step);
-    }
-
-    function startTimer() {
-      updateTimerDisplay();
-      timerInterval = setInterval(() => {
-        remainingSeconds--;
-        updateTimerDisplay();
-        if (remainingSeconds <= 0) {
-          clearInterval(timerInterval);
-          finalizeSubmission();
-        }
-      }, 1000);
-    }
-
-    function updateTimerDisplay() {
-      const m = Math.floor(remainingSeconds / 60);
-      const s = remainingSeconds % 60;
-      document.getElementById("exam-timer").innerText = 
-        `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-
-    async function finalizeSubmission() {
-      clearInterval(timerInterval);
-      window.removeEventListener("blur", triggerViolation);
-
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-
-      let score = 0;
-      generatedQuestions.forEach((q, idx) => {
-        const selectedOptIdx = userResponses[idx];
-        if (selectedOptIdx !== undefined && q.options[selectedOptIdx].correct) {
-          score++;
-        }
-      });
-
-      document.getElementById("view-exam").classList.add("hidden");
-      document.getElementById("view-result").classList.remove("hidden");
-
-      document.getElementById("res-score").innerText = score;
-      document.getElementById("res-total").innerText = generatedQuestions.length;
-
-      const auditPayload = JSON.stringify({
-        roll: "8462",
-        responses: userResponses,
-        score: score,
-        timestamp: new Date().toISOString()
-      });
-
-      const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(auditPayload));
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-      document.getElementById("res-hash").innerText = hashHex;
-    }
-
-    function shuffleArray(arr) {
-      const copy = [...arr];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    initAdmin();
-  </script>
-</body>
-</html>
+      d
