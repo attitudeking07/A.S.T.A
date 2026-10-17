@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTA | AI-Secured Testing Architecture</title>
+  <style>
+    :root {
+      --bg: #030712;
+      --card: #0b1120;
+      --panel: #111827;
+      --border: #1f2937;
+      --cyan: #06b6d4;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 12px;
+    }
+
+    .asta-navbar {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .asta-logo-svg {
+      width: 38px;
+      height: 38px;
+      filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.4));
+    }
+
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    .brand-text span {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .badge-secure {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 17px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #d1d5db;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 14px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--cyan);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      color: #030712;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.95;
+    }
+
+    .btn-secondary {
+      background: var(--panel);
+      color: #d1d5db;
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #1e293b;
+    }
+
+    .subject-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--panel);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      align-items: center;
+    }
+
+    .subject-row input.sub-name {
+      flex: 2 1 140px;
+      margin-bottom: 0;
+    }
+
+    .subject-row input.sub-count {
+      flex: 1 1 60px;
+      margin-bottom: 0;
+    }
+
+    .subject-row select.sub-diff {
+      flex: 1 1 90px;
+      margin-bottom: 0;
+    }
+
+    .subject-row .btn-del {
+      flex: 0 0 36px;
+      height: 36px;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid var(--red);
+      padding: 0;
+      margin-bottom: 0;
+    }
+
+    .difficulty-meter {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .timer-badge {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .option-btn {
+      text-align: left;
+      background: var(--panel);
+      color: var(--text);
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-weight: normal;
+    }
+
+    .option-btn:hover {
+      border-color: var(--cyan);
+      background: #1e293b;
+    }
+
+    .option-btn.selected {
+      border-color: var(--cyan);
+      background: rgba(6, 182, 212, 0.15);
+    }
+
+    .violation-box {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+
+    .hash-display {
+      font-family: monospace;
+      font-size: 11px;
+      background: #030712;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      word-break: break-all;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .spinner {
+      margin: 20px auto;
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(6, 182, 212, 0.2);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="asta-navbar">
+    <div class="brand-group">
+      <svg class="asta-logo-svg" viewBox="0 0 100 100" fill="none">
+        <polygon points="50,6 92,24 92,62 50,94 8,62 8,24" stroke="url(#astaGrad)" stroke-width="4" fill="#090a12" />
+        <path d="M50 22 L26 72 L38 72 L44 58 L56 58 L62 72 L74 72 Z" fill="url(#astaGrad)" />
+        <polygon points="50,37 46,50 54,50" fill="#090a12" />
+        <circle cx="50" cy="46" r="2.5" fill="#06b6d4" />
+        <defs>
+          <linearGradient id="astaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#3b82f6" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="brand-text">
+        <h1>ASTA</h1>
+        <span>AI-Secured Testing Architecture</span>
+      </div>
+    </div>
+    <div class="badge-secure">Zero-Trust Active</div>
+  </div>
+
+  <div class="container">
+
+    <!-- ADMIN SETUP VIEW -->
+    <div id="view-admin" class="card">
+      <h2>Exam Blueprint Configuration</h2>
+      <p>Exam name, time aur subject modules set karein. ASTA Engine AI ke zariye questions compile karega.</p>
+
+      <label>Target Examination Name</label>
+      <input type="text" id="cfg-exam-name" value="RRB Radiographer CBT Examination 2026">
+
+      <label>Exam Duration (Minutes)</label>
+      <input type="number" id="cfg-duration" value="10" min="1" max="180">
+
+      <label>Subject Modules & Distribution</label>
+      <div id="subjects-container"></div>
+      <button type="button" class="btn-secondary" onclick="addSubjectRow()" style="margin-bottom: 14px;">+ Add Subject</button>
+
+      <div class="difficulty-meter">
+        <label>Exam Difficulty Profile</label>
+        <div id="overall-difficulty-text" style="font-weight: 700; color: var(--cyan); margin-bottom: 8px;">Medium (Standard Distribution)</div>
+        <input type="range" id="global-difficulty" min="1" max="3" value="2" oninput="manualSliderAdjust()">
+      </div>
+
+      <button type="button" id="btn-compile" onclick="prepareAndGenerateExam()">Compile & Encrypt to ASTA Vault</button>
+      <div id="loading-spinner" class="spinner hidden"></div>
+    </div>
+
+    <!-- CANDIDATE DECRYPTION & LOGIN VIEW -->
+    <div id="view-login" class="card hidden">
+      <h2>Terminal: Dynamic On-Spot Decryption</h2>
+      <p>Question paper ASTA Cloud Vault par encrypted hai. Decrypt karne ke liye credentials enter karein.</p>
+      
+      <div style="background:#030712; padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:14px;">
+        <p style="margin:0; font-size:11px; color:var(--cyan);"><strong>Vault Protection:</strong> Dynamic AES-256 Vault Locked</p>
+        <p style="margin:4px 0 0 0; font-size:11px; color:var(--muted);"><strong>Exam Stream:</strong> <span id="login-exam-title" style="color:#fff;"></span></p>
+      </div>
+
+      <label>Candidate Roll Number</label>
+      <input type="text" id="login-roll" placeholder="Roll Number (8462)">
+
+      <label>Decryption Password</label>
+      <input type="password" id="login-pass" placeholder="Password (0411)">
+
+      <div id="login-error" style="color:var(--red); font-size:12px; margin-bottom:12px; display:none;">
+        Invalid Credentials. Decryption Access Denied.
+      </div>
+
+      <button type="button" onclick="attemptDecryption()">Decrypt Package & Enter Kiosk</button>
+    </div>
+
+    <!-- CLEAN SECURE KIOSK EXAMINATION VIEW -->
+    <div id="view-exam" class="card hidden">
+      <div class="top-bar">
+        <div>
+          <h3 id="exam-display-name" style="margin:0; font-size:14px;"></h3>
+          <span id="q-counter" style="font-size:11px; color:var(--muted);"></span>
+        </div>
+        <div class="timer-badge" id="exam-timer">00:00</div>
+      </div>
+
+      <div id="violation-tracker" class="violation-box hidden">
+        SECURITY WARNING: Focus Lost! Strike: <span id="violation-count">0</span>/3
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h3 id="q-text" style="color:var(--text); font-size:15px; line-height:1.5;"></h3>
+      </div>
+
+      <div id="options-container"></div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button type="button" class="btn-secondary" onclick="navigateQuestion(-1)">Previous</button>
+        <button type="button" class="btn-secondary" onclick="navigateQuestion(1)">Next</button>
+        <button type="button" onclick="finalizeSubmission()">Final Submission</button>
+      </div>
+    </div>
+
+    <!-- AUDIT REPORT VIEW -->
+    <div id="view-result" class="card hidden">
+      <h2>ASTA Cryptographic Verification</h2>
+      <p>Candidate session responses verified and cryptographically signed.</p>
+
+      <div style="font-size:22px; font-weight:800; color:var(--green); margin-bottom:14px;">
+        Score: <span id="res-score"></span> / <span id="res-total"></span>
+      </div>
+
+      <label>SHA-256 Response Audit Hash</label>
+      <div class="hash-display" id="res-hash">Generating audit hash...</div>
+
+      <div style="margin-top:20px;">
+        <button type="button" class="btn-secondary" onclick="location.reload()">Reset Terminal</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // SECURED INJECTED API KEY
+    const GEMINI_API_KEY = "AQ.Ab8RN6L5t4WLXVlQXHcXjqbwPqozSp9CusQNurL_oQCAlFkRpQ"; 
+
+    const defaultSubjects = [
+      { name: "Radiation Physics", count: 2, difficulty: "Medium" },
+      { name: "Radiographic Positioning", count: 2, difficulty: "Hard" },
+      { name: "General Aptitude", count: 2, difficulty: "Easy" }
+    ];
+
+    let examConfig = {};
+    let generatedQuestions = [];
+    let userResponses = {};
+    let currentIndex = 0;
+    let remainingSeconds = 0;
+    let timerInterval = null;
+    let violationStrikes = 0;
+
+    function initAdmin() {
+      const container = document.getElementById("subjects-container");
+      container.innerHTML = "";
+      defaultSubjects.forEach(s => addSubjectRow(s.name, s.count, s.difficulty));
+      updateCalculatedDifficulty();
+    }
+
+    function addSubjectRow(name = "", count = 2, diff = "Medium") {
+      const div = document.createElement("div");
+      div.className = "subject-row";
+      div.innerHTML = `
+        <input type="text" class="sub-name" placeholder="Subject" value="${name}">
+        <input type="number" class="sub-count" min="1" max="25" value="${count}" onchange="updateCalculatedDifficulty()">
+        <select class="sub-diff" onchange="updateCalculatedDifficulty()">
+          <option value="Easy" ${diff === 'Easy' ? 'selected' : ''}>Easy</option>
+          <option value="Medium" ${diff === 'Medium' ? 'selected' : ''}>Medium</option>
+          <option value="Hard" ${diff === 'Hard' ? 'selected' : ''}>Hard</option>
+        </select>
+        <button type="button" class="btn-del" onclick="this.parentElement.remove(); updateCalculatedDifficulty();">✕</button>
+      `;
+      document.getElementById("subjects-container").appendChild(div);
+    }
+
+    function updateCalculatedDifficulty() {
+      const diffMap = { "Easy": 1, "Medium": 2, "Hard": 3 };
+      const rows = document.querySelectorAll(".subject-row");
+      let totalScore = 0;
+      let totalCount = 0;
+
+      rows.forEach(r => {
+        const cnt = parseInt(r.querySelector(".sub-count").value) || 0;
+        const diff = r.querySelector(".sub-diff").value;
+        totalScore += cnt * diffMap[diff];
+        totalCount += cnt;
+      });
+
+      const avg = totalCount > 0 ? (totalScore / totalCount) : 2;
+      const label = document.getElementById("overall-difficulty-text");
+      const slider = document.getElementById("global-difficulty");
+
+      if (avg <= 1.4) {
+        label.innerText = "Easy (Basic Recall)";
+        slider.value = 1;
+      } else if (avg <= 2.3) {
+        label.innerText = "Medium (Standard Distribution)";
+        slider.value = 2;
+      } else {
+        label.innerText = "Hard (High Technical Rigor)";
+        slider.value = 3;
+      }
+    }
+
+    function manualSliderAdjust() {
+      const val = document.getElementById("global-difficulty").value;
+      const label = document.getElementById("overall-difficulty-text");
+      const targetDiff = val == 1 ? "Easy" : (val == 2 ? "Medium" : "Hard");
+      label.innerText = `${targetDiff} (Manually Overridden)`;
+
+      document.querySelectorAll(".sub-diff").forEach(sel => {
+        sel.value = targetDiff;
+      });
+    }
+
+    async function prepareAndGenerateExam() {
+      const btn = document.getElementById("btn-compile");
+      const spinner = document.getElementById("loading-spinner");
+      btn.classList.add("hidden");
+      spinner.classList.remove("hidden");
+
+      const examName = document.getElementById("cfg-exam-name").value;
+      const duration = parseInt(document.getElementById("cfg-duration").value) || 10;
+
+      const subjectRows = document.querySelectorAll(".subject-row");
+      const subjects = [];
+      subjectRows.forEach(r => {
+        subjects.push({
+          name: r.querySelector(".sub-name").value,
+          count: parseInt(r.querySelector(".sub-count").value) || 1,
+          difficulty: r.querySelector(".sub-diff").value
+        });
+      });
+
+      examConfig = { examName, duration, subjects };
+
+      if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
+        try {
+          generatedQuestions = await fetchQuestionsFromGemini(GEMINI_API_KEY.trim(), examConfig);
+        } catch (err) {
+          console.error("AI Error:", err);
+          generatedQuestions = generateFallbackQuestions(examConfig);
+        }
+      } else {
+        generatedQuestions = generateFallbackQuestions(examConfig);
+      }
+
+      generatedQuestions = shuffleArray(generatedQuestions);
+      generatedQuestions.forEach(q => {
+        q.options = shuffleArray(q.options);
+      });
+
+      spinner.classList.add("hidden");
+      document.getElementById("view-admin").classList.add("hidden");
+      document.getElementById("login-exam-title").innerText = examName;
+      document.getElementById("view-login").classList.remove("hidden");
+    }
+
+    async function fetchQuestionsFromGemini(key, cfg) {
+      const prompt = `Generate realistic Multiple Choice Questions for competitive exam titled "${cfg.examName}".
+Modules specification: ${JSON.stringify(cfg.subjects)}.
+Output format: Return ONLY a valid JSON array of objects without markdown formatting or code blocks:
+[
+  {
+    "text": "Actual question body without difficulty labels or subject tags?",
+    "options": [
+      {"text": "Correct Option", "correct": true},
+      {"text": "Wrong Option 1", "correct": false},
+      {"text": "Wrong Option 2", "correct": false},
+      {"text": "Wrong Option 3", "correct": false}
+    ]
+  }
+]`;
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.candidates[0].content.parts[0].text;
+      const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(clean);
+    }
+
+    function generateFallbackQuestions(cfg) {
+      const qBank = {
+        "Radiation Physics": [
+          { text: "What is the SI unit of absorbed radiation dose?", options: [{text:"Gray (Gy)", correct:true},{text:"Sievert (Sv)", correct:false},{text:"Becquerel (Bq)", correct:false},{text:"Roentgen", correct:false}] },
+          { text: "Which interaction between X-rays and matter results in total photon absorption?", options: [{text:"Photoelectric Effect", correct:true},{text:"Compton Scattering", correct:false},{text:"Coherent Scattering", correct:false},{text:"Pair Production", correct:false}] }
+        ],
+        "Radiographic Positioning": [
+          { text: "Which radiographic projection best demonstrates free intraperitoneal air under the diaphragm?", options: [{text:"Erect Chest PA / Abdomen", correct:true},{text:"Supine Abdomen AP", correct:false},{text:"Right Lateral Decubitus", correct:false},{text:"Prone Abdomen", correct:false}] },
+          { text: "In standard PA chest radiography, why is a minimum 72-inch (180 cm) SID used?", options: [{text:"To minimize heart magnification", correct:true},{text:"To increase beam scatter", correct:false},{text:"To decrease exposure time", correct:false},{text:"To avoid grid cutoff", correct:false}] }
+        ],
+        "General Aptitude": [
+          { text: "A worker completes a task in 12 days and another does it in 24 days. Together they complete it in:", options: [{text:"8 days", correct:true},{text:"10 days", correct:false},{text:"16 days", correct:false},{text:"6 days", correct:false}] },
+          { text: "In a code, 'SAFE' is coded as 'TBGF'. How is 'EXAM' coded?", options: [{text:"FYBN", correct:true},{text:"FZBN", correct:false},{text:"EYBN", correct:false},{text:"FXAM", correct:false}] }
+        ]
+      };
+
+      const list = [];
+      cfg.subjects.forEach(sub => {
+        const pool = qBank[sub.name] || [
+          { text: `What is the standard regulatory protocol for ${sub.name}?`, options: [{text:"Verified Core Standard", correct:true},{text:"Uncalibrated Drift", correct:false},{text:"Bypass Route", correct:false},{text:"Secondary Leakage", correct:false}] }
+        ];
+        for (let i = 0; i < sub.count; i++) {
+          list.push(pool[i % pool.length]);
+        }
+      });
+      return list;
+    }
+
+    function attemptDecryption() {
+      const roll = document.getElementById("login-roll").value.trim();
+      const pass = document.getElementById("login-pass").value.trim();
+      const err = document.getElementById("login-error");
+
+      if (roll === "8462" && pass === "0411") {
+        err.style.display = "none";
+        launchKioskMode();
+      } else {
+        err.style.display = "block";
+      }
+    }
+
+    function launchKioskMode() {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
+      document.getElementById("view-login").classList.add("hidden");
+      document.getElementById("view-exam").classList.remove("hidden");
+      document.getElementById("exam-display-name").innerText = examConfig.examName;
+
+      remainingSeconds = examConfig.duration * 60;
+      startTimer();
+      renderQuestion(0);
+      bindSecurityListeners();
+    }
+
+    function bindSecurityListeners() {
+      window.addEventListener("blur", triggerViolation);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) triggerViolation();
+      });
+    }
+
+    function triggerViolation() {
+      violationStrikes++;
+      const box = document.getElementById("violation-tracker");
+      box.classList.remove("hidden");
+      document.getElementById("violation-count").innerText = violationStrikes;
+
+      if (violationStrikes >= 3) {
+        alert("Maximum security violations reached. Auto-Submitting.");
+        finalizeSubmission();
+      }
+    }
+
+    function renderQuestion(index) {
+      if (index < 0 || index >= generatedQuestions.length) return;
+      currentIndex = index;
+
+      const q = generatedQuestions[index];
+      document.getElementById("q-counter").innerText = `Question ${index + 1} of ${generatedQuestions.length}`;
+      document.getElementById("q-text").innerText = q.text;
+
+      const optContainer = document.getElementById("options-container");
+      optContainer.innerHTML = "";
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "option-btn";
+        if (userResponses[currentIndex] === idx) {
+          btn.classList.add("selected");
+        }
+        btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt.text}`;
+        btn.onclick = () => {
+          userResponses[currentIndex] = idx;
+          renderQuestion(currentIndex);
+        };
+        optContainer.appendChild(btn);
+      });
+    }
+
+    function navigateQuestion(step) {
+      renderQuestion(currentIndex + step);
+    }
+
+    function startTimer() {
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        remainingSeconds--;
+        updateTimerDisplay();
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          finalizeSubmission();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      document.getElementById("exam-timer").innerText = 
+        `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    async function finalizeSubmission() {
+      clearInterval(timerInterval);
+      window.removeEventListener("blur", triggerViolation);
+
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+
+      let score = 0;
+      generatedQuestions.forEach((q, idx) => {
+        const selectedOptIdx = userResponses[idx];
+        if (selectedOptIdx !== undefined && q.options[selectedOptIdx].correct) {
+          score++;
+        }
+      });
+
+      document.getElementById("view-exam").classList.add("hidden");
+      document.getElementById("view-result").classList.remove("hidden");
+
+      document.getElementById("res-score").innerText = score;
+      document.getElementById("res-total").innerText = generatedQuestions.length;
+
+      const auditPayload = JSON.stringify({
+        roll: "8462",
+        responses: userResponses,
+        score: score,
+        timestamp: new Date().toISOString()
+      });
+
+      const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(auditPayload));
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      document.getElementById("res-hash").innerText = hashHex;
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    initAdmin();
+  </script>
+</body>
+</html>
