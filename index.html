@@ -279,10 +279,15 @@
       display: none !important;
     }
 
+    .spinner-box {
+      text-align: center;
+      padding: 20px;
+    }
+
     .spinner {
-      margin: 20px auto;
-      width: 32px;
-      height: 32px;
+      margin: 10px auto;
+      width: 36px;
+      height: 36px;
       border: 3px solid rgba(6, 182, 212, 0.2);
       border-top-color: var(--cyan);
       border-radius: 50%;
@@ -320,7 +325,7 @@
     <!-- ADMIN SETUP VIEW -->
     <div id="view-admin" class="card">
       <h2>National Examination Blueprint Hub</h2>
-      <p>India ke kisi bhi exam (SSC, UPSC, Police SI, Railway, Defence, State Board) ke subjects aur difficulty level configure karein.</p>
+      <p>Target exam aur subjects configure karein. ASTA Gemini AI ke through direct real-time questions banayega.</p>
 
       <label>Target Examination Name</label>
       <input type="text" id="cfg-exam-name" value="SSC Sub Inspector (SI) Examination">
@@ -330,7 +335,7 @@
 
       <label>Subject Modules & Distribution</label>
       <div id="subjects-container"></div>
-      <button type="button" class="btn-secondary" onclick="addSubjectRow()" style="margin-bottom: 14px;">+ Add Subject</button>
+      <button type="button" class="btn-secondary" id="btn-add-subject" onclick="handleAddSubjectClick(event)" style="margin-bottom: 14px;">+ Add Subject</button>
 
       <div class="difficulty-meter">
         <label>Exam Difficulty Profile</label>
@@ -339,13 +344,17 @@
       </div>
 
       <button type="button" id="btn-compile" onclick="prepareAndGenerateExam()">Compile & Encrypt to ASTA Vault</button>
-      <div id="loading-spinner" class="spinner hidden"></div>
+      
+      <div id="loading-box" class="spinner-box hidden">
+        <div class="spinner"></div>
+        <p style="color: var(--cyan); margin: 0; font-size: 13px;">ASTA Gemini AI questions generate kar raha hai, kripya wait karein...</p>
+      </div>
     </div>
 
     <!-- CANDIDATE DECRYPTION & LOGIN VIEW -->
     <div id="view-login" class="card hidden">
       <h2>Terminal: Dynamic On-Spot Decryption</h2>
-      <p>Question paper ASTA Cloud Vault par encrypted hai. Shift start ke waqt credentials darj karke decrypt karein.</p>
+      <p>AI Generated Paper ASTA Cloud Vault par encrypted hai. Shift start karne ke liye credentials enter karein.</p>
       
       <div style="background:#030712; padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:14px;">
         <p style="margin:0; font-size:11px; color:var(--cyan);"><strong>Vault Protection:</strong> Dynamic AES-256 Cloud Locked</p>
@@ -353,10 +362,10 @@
       </div>
 
       <label>Candidate Roll Number</label>
-      <input type="text" id="login-roll" placeholder="Roll Number (e.g., 8462)">
+      <input type="text" id="login-roll" placeholder="Roll Number (8462)">
 
       <label>Decryption Password</label>
-      <input type="password" id="login-pass" placeholder="Password (e.g., 0411)">
+      <input type="password" id="login-pass" placeholder="Password (0411)">
 
       <div id="login-error" style="color:var(--red); font-size:12px; margin-bottom:12px; display:none;">
         Invalid Credentials. Decryption Access Denied.
@@ -412,13 +421,13 @@
   </div>
 
   <script>
+    // DIRECT INJECTED GEMINI API KEY
     const GEMINI_API_KEY = "AQ.Ab8RN6IDWBo1-nHo4lCa9exsxy9pD3G80DyQzWi2o9gAfjDtgQ"; 
 
-    // DEFAULT UNIVERSAL SUBJECT SET
     const defaultSubjects = [
       { name: "General Hindi", count: 2, difficulty: "Medium" },
-      { name: "General Knowledge & Current Affairs", count: 2, difficulty: "Medium" },
-      { name: "Reasoning & Mental Ability", count: 2, difficulty: "Hard" }
+      { name: "General Knowledge", count: 2, difficulty: "Medium" },
+      { name: "Reasoning", count: 2, difficulty: "Hard" }
     ];
 
     let examConfig = {};
@@ -429,6 +438,12 @@
     let timerInterval = null;
     let violationStrikes = 0;
 
+    function handleAddSubjectClick(e) {
+      if (e) e.preventDefault();
+      addSubjectRow("", 2, "Medium");
+      updateCalculatedDifficulty();
+    }
+
     function initAdmin() {
       const container = document.getElementById("subjects-container");
       container.innerHTML = "";
@@ -437,19 +452,30 @@
     }
 
     function addSubjectRow(name = "", count = 2, diff = "Medium") {
+      const container = document.getElementById("subjects-container");
       const div = document.createElement("div");
       div.className = "subject-row";
+      
       div.innerHTML = `
         <input type="text" class="sub-name" placeholder="Subject Name" value="${name}">
-        <input type="number" class="sub-count" min="1" max="25" value="${count}" onchange="updateCalculatedDifficulty()">
-        <select class="sub-diff" onchange="updateCalculatedDifficulty()">
+        <input type="number" class="sub-count" min="1" max="25" value="${count}">
+        <select class="sub-diff">
           <option value="Easy" ${diff === 'Easy' ? 'selected' : ''}>Easy</option>
           <option value="Medium" ${diff === 'Medium' ? 'selected' : ''}>Medium</option>
           <option value="Hard" ${diff === 'Hard' ? 'selected' : ''}>Hard</option>
         </select>
-        <button type="button" class="btn-del" onclick="this.parentElement.remove(); updateCalculatedDifficulty();">✕</button>
+        <button type="button" class="btn-del">✕</button>
       `;
-      document.getElementById("subjects-container").appendChild(div);
+
+      div.querySelector(".sub-count").addEventListener("input", updateCalculatedDifficulty);
+      div.querySelector(".sub-diff").addEventListener("change", updateCalculatedDifficulty);
+      div.querySelector(".btn-del").addEventListener("click", function(e) {
+        e.preventDefault();
+        div.remove();
+        updateCalculatedDifficulty();
+      });
+
+      container.appendChild(div);
     }
 
     function updateCalculatedDifficulty() {
@@ -492,11 +518,12 @@
       });
     }
 
+    // PURE AI GENERATION FUNCTION
     async function prepareAndGenerateExam() {
       const btn = document.getElementById("btn-compile");
-      const spinner = document.getElementById("loading-spinner");
+      const spinnerBox = document.getElementById("loading-box");
       btn.classList.add("hidden");
-      spinner.classList.remove("hidden");
+      spinnerBox.classList.remove("hidden");
 
       const examName = document.getElementById("cfg-exam-name").value;
       const duration = parseInt(document.getElementById("cfg-duration").value) || 10;
@@ -504,54 +531,68 @@
       const subjectRows = document.querySelectorAll(".subject-row");
       const subjects = [];
       subjectRows.forEach(r => {
-        subjects.push({
-          name: r.querySelector(".sub-name").value.trim(),
-          count: parseInt(r.querySelector(".sub-count").value) || 1,
-          difficulty: r.querySelector(".sub-diff").value
-        });
+        const sName = r.querySelector(".sub-name").value.trim();
+        if (sName) {
+          subjects.push({
+            name: sName,
+            count: parseInt(r.querySelector(".sub-count").value) || 1,
+            difficulty: r.querySelector(".sub-diff").value
+          });
+        }
       });
+
+      if (subjects.length === 0) {
+        alert("Kam se kam ek subject zaroor add karein.");
+        btn.classList.remove("hidden");
+        spinnerBox.classList.add("hidden");
+        return;
+      }
 
       examConfig = { examName, duration, subjects };
 
-      // LIVE AI ATTEMPT FIRST
-      let aiSuccess = false;
-      if (GEMINI_API_KEY && GEMINI_API_KEY.length > 15) {
-        try {
-          generatedQuestions = await fetchQuestionsFromGemini(GEMINI_API_KEY.trim(), examConfig);
-          if (generatedQuestions && generatedQuestions.length > 0) {
-            aiSuccess = true;
-          }
-        } catch (err) {
-          console.warn("Live API Notice: Switching to ASTA Universal Engine.", err.message);
+      try {
+        // Direct Call to Gemini API
+        generatedQuestions = await fetchDirectFromGemini(GEMINI_API_KEY.trim(), examConfig);
+
+        if (!generatedQuestions || generatedQuestions.length === 0) {
+          throw new Error("AI returned empty question set. Please retry.");
         }
+
+        // Shuffle questions and options dynamically
+        generatedQuestions = shuffleArray(generatedQuestions);
+        generatedQuestions.forEach(q => {
+          q.options = shuffleArray(q.options);
+        });
+
+        spinnerBox.classList.add("hidden");
+        btn.classList.remove("hidden");
+        document.getElementById("view-admin").classList.add("hidden");
+        document.getElementById("login-exam-title").innerText = examName;
+        document.getElementById("view-login").classList.remove("hidden");
+
+      } catch (err) {
+        spinnerBox.classList.add("hidden");
+        btn.classList.remove("hidden");
+        alert("GEMINI AI ERROR: " + err.message);
       }
-
-      // IF LIVE API IS RESTRICTED BY CORS/KEY, USE ADVANCED SUBJECT-AWARE SYNTHESIZER
-      if (!aiSuccess) {
-        generatedQuestions = generateUniversalSubjectExam(examConfig);
-      }
-
-      // Dynamic Shuffling of questions & options
-      generatedQuestions = shuffleArray(generatedQuestions);
-      generatedQuestions.forEach(q => {
-        q.options = shuffleArray(q.options);
-      });
-
-      spinner.classList.add("hidden");
-      btn.classList.remove("hidden");
-      document.getElementById("view-admin").classList.add("hidden");
-      document.getElementById("login-exam-title").innerText = examName;
-      document.getElementById("view-login").classList.remove("hidden");
     }
 
-    // LIVE GEMINI FETCH METHOD
-    async function fetchQuestionsFromGemini(key, cfg) {
-      const promptText = `Generate multiple choice questions for exam: "${cfg.examName}".
-Modules: ${JSON.stringify(cfg.subjects)}.
-Output format: Return ONLY valid JSON array without any markdown formatting or ticks:
+    // DIRECT GEMINI REST API ENGINE
+    async function fetchDirectFromGemini(key, cfg) {
+      const prompt = `You are an official examination question generator.
+Generate authentic, high-quality multiple choice questions for the competitive exam titled: "${cfg.examName}".
+Generate exact number of questions as specified per subject:
+${JSON.stringify(cfg.subjects)}
+
+Rules:
+1. If the subject is 'Hindi' or 'General Hindi', the question and options MUST be in pure Hindi language.
+2. If the subject is 'General Knowledge', 'Math', 'Reasoning' or any other subject, generate real, relevant competitive examination questions.
+3. Return ONLY a valid JSON array of objects. Do NOT include markdown code blocks, do not include \`\`\`json or \`\`\`.
+
+Required JSON format:
 [
   {
-    "text": "Exact Question Statement?",
+    "text": "Actual question body?",
     "options": [
       {"text": "Correct Option", "correct": true},
       {"text": "Wrong Option 1", "correct": false},
@@ -561,89 +602,31 @@ Output format: Return ONLY valid JSON array without any markdown formatting or t
   }
 ]`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }]
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: "application/json"
+          }
         })
       });
 
-      if (!res.ok) throw new Error("API Connection Refused");
-      const data = await res.json();
-      const raw = data.candidates[0].content.parts[0].text;
-      const clean = raw.replace(/```json/gi, '').replace(/```/gi, '').trim();
-      return JSON.parse(clean);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Google API Status ${response.status}: ${errorText}`);
+      }
 
-    // ============================================================
-    // ASTA UNIVERSAL INDIAN EXAMS KNOWLEDGE SYNTHESIZER
-    // Covers Hindi, GK/GS, Math, Reasoning, English, Science, Technical
-    // ============================================================
-    function generateUniversalSubjectExam(cfg) {
-      const bank = {
-        hindi: [
-          { text: "निम्न में से कौन सा शब्द शुद्ध वर्तनी वाला है?", options: [{text:"उज्ज्वल", correct:true},{text:"उज्वल", correct:false},{text:"उज्जवल", correct:false},{text:"उज्वल्ल", correct:false}] },
-          { text: "'यथाशक्ति' में कौन सा समास है?", options: [{text:"अव्ययीभाव समास", correct:true},{text:"तत्पुरुष समास", correct:false},{text:"द्विगु समास", correct:false},{text:"कर्मधारय समास", correct:false}] },
-          { text: "'सूर्योदय' शब्द का सही संधि-विच्छेद क्या होगा?", options: [{text:"सूर्य + उदय", correct:true},{text:"सूर्यो + दय", correct:false},{text:"सूर्य + दय", correct:false},{text:"सूर्या + उदय", correct:false}] },
-          { text: "'अंगूठा दिखाना' मुहावरे का सही अर्थ क्या है?", options: [{text:"साफ मना करना / इनकार करना", correct:true},{text:"मजाक उड़ाना", correct:false},{text:"पास बुलाना", correct:false},{text:"चापलूसी करना", correct:false}] },
-          { text: "'अनुराग' शब्द का सही विलोम शब्द क्या है?", options: [{text:"विराग", correct:true},{text:"राग", correct:false},{text:"द्वेष", correct:false},{text:"विमुख", correct:false}] }
-        ],
-        gk: [
-          { text: "भारतीय संविधान के किस अनुच्छेद के तहत मौलिक अधिकारों की गारंटी दी गई है?", options: [{text:"अनुच्छेद 12 से 35", correct:true},{text:"अनुच्छेद 36 से 51", correct:false},{text:"अनुच्छेद 51A", correct:false},{text:"अनुच्छेद 1 से 4", correct:false}] },
-          { text: "भारत में 'प्रायद्वीपीय पठार' की सबसे ऊंची चोटी कौन सी है?", options: [{text:"अनाईमुडी (Anamudi)", correct:true},{text:"डोडाबेटा", correct:false},{text:"गुरु शिखर", correct:false},{text:"महेंद्रगिरि", correct:false}] },
-          { text: "हड़प्पा सभ्यता का प्रसिद्ध स्थल 'लोथल' किस राज्य में स्थित है?", options: [{text:"गुजरात", correct:true},{text:"राजस्थान", correct:false},{text:"हरियाणा", correct:false},{text:"पंजाब", correct:false}] },
-          { text: "नीति आयोग (NITI Aayog) के पदेन अध्यक्ष कौन होते हैं?", options: [{text:"भारत के प्रधानमंत्री", correct:true},{text:"राष्ट्रपति", correct:false},{text:"वित्त मंत्री", correct:false},{text:"गृह मंत्री", correct:false}] }
-        ],
-        reasoning: [
-          { text: "दिए गए विकल्पों में से संबंधित संख्या चुनिए: 8 : 64 :: 11 : ?", options: [{text:"121", correct:true},{text:"132", correct:false},{text:"111", correct:false},{text:"144", correct:false}] },
-          { text: "यदि किसी कूट भाषा में 'POLICE' को 'QPMJDF' लिखा जाता है, तो उसी भाषा में 'SI' को क्या लिखा जाएगा?", options: [{text:"TJ", correct:true},{text:"UJ", correct:false},{text:"TK", correct:false},{text:"SH", correct:false}] },
-          { text: "चार विकल्पों में से विषम (Odd One Out) को चुनिए: (A) जयपुर, (B) भोपाल, (C) लखनऊ, (D) कानपुर", options: [{text:"कानपुर (क्योंकि यह राजधानी नहीं है)", correct:true},{text:"जयपुर", correct:false},{text:"भोपाल", correct:false},{text:"लखनऊ", correct:false}] },
-          { text: "A, B का भाई है। C, A की माता है। D, C का पिता है। B का D से क्या संबंध है?", options: [{text:"पौत्र / नाती", correct:true},{text:"पुत्र", correct:false},{text:"पिता", correct:false},{text:"भाई", correct:false}] }
-        ],
-        math: [
-          { text: "यदि एक वस्तु का क्रय मूल्य ₹500 है और उसे ₹600 में बेचा जाता है, तो लाभ प्रतिशत क्या होगा?", options: [{text:"20%", correct:true},{text:"25%", correct:false},{text:"15%", correct:false},{text:"10%", correct:false}] },
-          { text: "दो संख्याओं का अनुपात 3:5 है और उनका योग 160 है। छोटी संख्या क्या है?", options: [{text:"60", correct:true},{text:"100", correct:false},{text:"40", correct:false},{text:"80", correct:false}] },
-          { text: "12 आदमी किसी कार्य को 8 दिन में पूरा कर सकते हैं। उसी कार्य को 16 आदमी कितने दिन में पूरा करेंगे?", options: [{text:"6 दिन", correct:true},{text:"4 दिन", correct:false},{text:"8 दिन", correct:false},{text:"10 दिन", correct:false}] }
-        ],
-        english: [
-          { text: "Choose the correctly spelt word:", options: [{text:"Lieutenant", correct:true},{text:"Lieutnant", correct:false},{text:"Leutenant", correct:false},{text:"Luetenant", correct:false}] },
-          { text: "Identify the synonym of 'CANDID':", options: [{text:"Frank / Honest", correct:true},{text:"Secretive", correct:false},{text:"Deceptive", correct:false},{text:"Arrogant", correct:false}] },
-          { text: "Fill in the blank: 'He has been living here _____ 2018.'", options: [{text:"since", correct:true},{text:"for", correct:false},{text:"from", correct:false},{text:"by", correct:false}] }
-        ],
-        general_science: [
-          { text: "मानव शरीर में रक्त का शुद्धिकरण (Purification) किस अंग द्वारा होता है?", options: [{text:"वृक्क (Kidney)", correct:true},{text:"फेफड़े", correct:false},{text:"हृदय", correct:false},{text:"यकृत", correct:false}] },
-          { text: "वायुमंडलीय दाब (Atmospheric Pressure) को मापने के लिए किस यंत्र का उपयोग किया जाता है?", options: [{text:"बैरोमीटर (Barometer)", correct:true},{text:"हाइड्रोमीटर", correct:false},{text:"थर्मामीटर", correct:false},{text:"एनीमोमीटर", correct:false}] }
-        ]
-      };
+      const data = await response.json();
+      if (!data.candidates || !data.candidates[0].content) {
+        throw new Error("No response generated from Gemini.");
+      }
 
-      const finalQuestions = [];
-
-      cfg.subjects.forEach(sub => {
-        const sName = sub.name.toLowerCase();
-        let targetPool = bank.gk; // Default fallback pool
-
-        if (sName.includes("hindi")) targetPool = bank.hindi;
-        else if (sName.includes("reasoning") || sName.includes("mental") || sName.includes("tarkshakti")) targetPool = bank.reasoning;
-        else if (sName.includes("math") || sName.includes("aptitude") || sName.includes("ganit")) targetPool = bank.math;
-        else if (sName.includes("english")) targetPool = bank.english;
-        else if (sName.includes("science") || sName.includes("vigyan")) targetPool = bank.general_science;
-        else if (sName.includes("gk") || sName.includes("gs") || sName.includes("knowledge") || sName.includes("samanya")) targetPool = bank.gk;
-        else {
-          // Dynamic generator for any specialized domain
-          targetPool = [
-            { text: `[${sub.name}] परीक्षा पाठ्यक्रम के अनुसार कौन सा मानक प्रावधान अनिवार्य है?`, options: [{text:`प्रमाणित मुख्य अनुभाग (${sub.name})`, correct:true},{text:"असमायोजित द्वितीयक विचलन", correct:false},{text:"मैन्युअल बायपास प्रक्रिया", correct:false},{text:"अवैध सुरक्षा अंतराल", correct:false}] },
-            { text: `[${sub.name}] के संदर्भ में मूलभूत सिद्धांत निम्नलिखित में से किससे संबंधित है?`, options: [{text:`मानक वैधानिक नियम एवं दिशा-निर्देश`, correct:true},{text:"अप्रत्यक्ष अप्रमाणित आंकड़े", correct:false},{text:"अनियंत्रित त्रुटि प्रारूप", correct:false},{text:"शून्य सत्यापन", correct:false}] }
-          ];
-        }
-
-        for (let i = 0; i < sub.count; i++) {
-          const item = targetPool[i % targetPool.length];
-          finalQuestions.push(JSON.parse(JSON.stringify(item)));
-        }
-      });
-
-      return finalQuestions;
+      const rawText = data.candidates[0].content.parts[0].text;
+      const cleanJson = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      return JSON.parse(cleanJson);
     }
 
     function attemptDecryption() {
@@ -788,7 +771,7 @@ Output format: Return ONLY valid JSON array without any markdown formatting or t
       return copy;
     }
 
-    initAdmin();
+    window.addEventListener("DOMContentLoaded", initAdmin);
   </script>
 </body>
 </html>
